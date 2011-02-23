@@ -45,6 +45,12 @@ describe CarrierWave::Uploader do
       @uploader.current_path.should == '/path/to/somewhere'
     end
 
+    it "should be set as stored" do
+      @uploader.stored?.should be_false
+      @uploader.store!(@file)
+      @uploader.stored?.should be_true
+    end
+
     it "should not be cached" do
       @uploader.store!(@file)
       @uploader.should_not be_cached
@@ -151,6 +157,12 @@ describe CarrierWave::Uploader do
     it "should set the identifier" do
       @uploader.retrieve_from_store!('monkey.txt')
       @uploader.identifier.should == 'this-is-me'
+    end
+
+    it "should be set as stored" do
+      @uploader.stored?.should be_false
+      @uploader.retrieve_from_store!('monkey.txt')
+      @uploader.stored?.should be_true
     end
 
     it "should instruct the storage engine to retrieve the file and store the result" do

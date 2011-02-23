@@ -77,6 +77,12 @@ module CarrierWave
         end
       end
 
+      ##
+      # Returns if the uploader has a file stored or not.
+      def stored?
+        !!@file
+      end
+
     private
 
       def full_filename(for_file)

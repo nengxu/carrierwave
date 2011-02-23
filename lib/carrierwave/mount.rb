@@ -226,6 +226,16 @@ module CarrierWave
           _mounter(:#{column}).write_identifier
         end
 
+        # Remove outdated image if the previous upload had a file stored and the
+        # new upload has nothing stored OR stored the file in a different path.
+        def remove_outdated_#{column}!
+          previous = read_previous_uploader(:#{column})
+          current = self.#{column}
+          if previous.respond_to?(:stored?) && previous.stored?
+            current_stored = current.respond_to?(:stored?) && current.stored?
+            previous.remove! if !current_stored || previous.store_path != current.store_path
+          end
+        end
       RUBY
 
     end
@@ -236,6 +246,11 @@ module CarrierWave
       # overwrite this to read from a serialized attribute
       #
       def read_uploader(column); end
+
+      ##
+      # overwrite this to read the value of a previously set upload
+      #
+      def read_previous_uploader(column); end
 
       ##
       # overwrite this to write to a serialized attribute

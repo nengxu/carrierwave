@@ -35,14 +35,11 @@ module CarrierWave
           super
         end
 
-        # Remove outdated image if the previous upload had a file stored and the
-        # new upload has nothing stored OR stored the file in a different path.
-        def remove_outdated_#{column}!
-          previous, current = #{column}_change
-          if previous.respond_to?(:stored?) && previous.stored?
-            current_stored = current.respond_to?(:stored?) && current.stored?
-            previous.remove! if !current_stored || previous.store_path != current.store_path
-          end
+        private
+
+        def read_previous_uploader(column)
+          previous, current = send("#{column}_change")
+          previous
         end
       RUBY
     end

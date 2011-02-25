@@ -179,11 +179,49 @@ describe CarrierWave::ActiveRecord do
         @event.image.should be_blank
       end
 
+      it "should mark field as changed" do
+        @event.image_changed?.should be_false
+        @event.image = stub_file("test.jpeg")
+        @event.image_changed?.should be_true
+        @event.save
+        @event.reload
+        @event.image_changed?.should be_false
+        @event.image = stub_file("test.jpg")
+        @event.image_changed?.should be_true
+      end
+
       it "should copy the file to the upload directory when a file has been assigned" do
         @event.image = stub_file('test.jpeg')
         @event.save.should be_true
         @event.image.should be_an_instance_of(@uploader)
         @event.image.current_path.should == public_path('uploads/test.jpeg')
+      end
+
+      it "should remove previous file" do
+        @event.image = stub_file('test.jpeg')
+        @event.save.should be_true
+        File.exists?(public_path('uploads/test.jpeg')).should be_true
+        @event.image = stub_file('test.jpg')
+        @event.save.should be_true
+        File.exists?(public_path('uploads/test.jpg')).should be_true
+        File.exists?(public_path('uploads/test.jpeg')).should be_false
+      end
+
+      it "should not remove previous file if it has the same name" do
+        @uploader.class_eval do
+          def filename
+            "hardcoded.txt"
+          end
+        end
+
+        @event.image = stub_file('test.jpeg')
+        @event.save.should be_true
+        File.exists?(public_path('uploads/hardcoded.txt')).should be_true
+        @event.image.read.should == "this is stuff"
+        @event.image = stub_file('bork.txt')
+        @event.save.should be_true
+        File.exists?(public_path('uploads/hardcoded.txt')).should be_true
+        @event.image.read.should =~ /bork/
       end
 
       it "should do nothing when a validation fails" do
@@ -240,7 +278,7 @@ describe CarrierWave::ActiveRecord do
 
     end
 
-    describe 'with overriddent filename' do
+    describe 'with overridden filename' do
 
       describe '#save' do
 

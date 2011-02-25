@@ -24,10 +24,24 @@ module CarrierWave
       validates_integrity_of column if uploader_option(column.to_sym, :validate_integrity)
       validates_processing_of column if uploader_option(column.to_sym, :validate_processing)
 
-      after_save "store_#{column}!"
-      before_save "write_#{column}_identifier"
-      after_destroy "remove_#{column}!"
+      # Use symbols because strings are evaluated instead of dispatched
+      after_save :"store_#{column}!", :"remove_outdated_#{column}!"
+      before_save :"write_#{column}_identifier"
+      after_destroy :"remove_#{column}!"
 
+      class_eval <<-RUBY, __FILE__, __LINE__+1
+        def #{column}=(new_file)
+          #{column}_will_change!
+          super
+        end
+
+        private
+
+        def read_previous_uploader(column)
+          previous, current = send("#{column}_change")
+          previous
+        end
+      RUBY
     end
 
   end # ActiveRecord

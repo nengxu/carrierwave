@@ -179,49 +179,11 @@ describe CarrierWave::ActiveRecord do
         @event.image.should be_blank
       end
 
-      it "should mark field as changed" do
-        @event.image_changed?.should be_false
-        @event.image = stub_file("test.jpeg")
-        @event.image_changed?.should be_true
-        @event.save
-        @event.reload
-        @event.image_changed?.should be_false
-        @event.image = stub_file("test.jpg")
-        @event.image_changed?.should be_true
-      end
-
       it "should copy the file to the upload directory when a file has been assigned" do
         @event.image = stub_file('test.jpeg')
         @event.save.should be_true
         @event.image.should be_an_instance_of(@uploader)
         @event.image.current_path.should == public_path('uploads/test.jpeg')
-      end
-
-      it "should remove previous file" do
-        @event.image = stub_file('test.jpeg')
-        @event.save.should be_true
-        File.exists?(public_path('uploads/test.jpeg')).should be_true
-        @event.image = stub_file('test.jpg')
-        @event.save.should be_true
-        File.exists?(public_path('uploads/test.jpg')).should be_true
-        File.exists?(public_path('uploads/test.jpeg')).should be_false
-      end
-
-      it "should not remove previous file if it has the same name" do
-        @uploader.class_eval do
-          def filename
-            "hardcoded.txt"
-          end
-        end
-
-        @event.image = stub_file('test.jpeg')
-        @event.save.should be_true
-        File.exists?(public_path('uploads/hardcoded.txt')).should be_true
-        @event.image.read.should == "this is stuff"
-        @event.image = stub_file('bork.txt')
-        @event.save.should be_true
-        File.exists?(public_path('uploads/hardcoded.txt')).should be_true
-        @event.image.read.should =~ /bork/
       end
 
       it "should do nothing when a validation fails" do
@@ -258,6 +220,16 @@ describe CarrierWave::ActiveRecord do
         @event[:image].should == ''
       end
 
+      it "should mark image as changed when saving a new image" do
+        @event.image_changed?.should be_false
+        @event.image = stub_file("test.jpeg")
+        @event.image_changed?.should be_true
+        @event.save
+        @event.reload
+        @event.image_changed?.should be_false
+        @event.image = stub_file("test.jpg")
+        @event.image_changed?.should be_true
+      end
     end
 
     describe '#destroy' do
@@ -344,6 +316,129 @@ describe CarrierWave::ActiveRecord do
         @event.should_not be_valid
       end
 
+    end
+
+    describe 'removing previously stored files' do
+      after do
+        FileUtils.rm_rf(file_path("uploads"))
+      end
+
+      it "should work with fog" do
+        pending # TODO note - we should check that this works with fog, maybe in the fog spec
+      end
+
+      it "should work with mongoid" do
+        pending # TODO note - we should get this working with mongoid, maybe in the mongoid spec
+      end
+
+      describe 'without additional options' do
+        before do
+          @event.image = stub_file('test.jpeg')
+          @event.save.should be_true
+          File.exists?(public_path('uploads/test.jpeg')).should be_true
+        end
+
+        it "should remove previous image if previous image had a different path" do
+          @event.image = stub_file('test.jpg')
+          @event.save.should be_true
+          File.exists?(public_path('uploads/test.jpg')).should be_true
+          File.exists?(public_path('uploads/test.jpeg')).should be_false
+        end
+
+        it "should not remove previous image if previous image had a different path but remove_previous_files is false" do
+          pending
+          # we should have an option to retain the old behavior,
+          # just in case someone wants to be safe, because really we could be
+          # deleting files that some other part of the system wants without us knowing.
+          # i'm not sure if remove_previous_files should default to true or not... something like:
+          # @event.stub!(:remove_previous_files).and_return(false)
+          @event.image = stub_file('test.jpg')
+          @event.save.should be_true
+          File.exists?(public_path('uploads/test.jpg')).should be_true
+          File.exists?(public_path('uploads/test.jpeg')).should be_false
+        end
+
+        it "should not remove image if previous image had the same path" do
+          @event.image = stub_file('test.jpeg')
+          @event.save.should be_true
+          File.exists?(public_path('uploads/test.jpeg')).should be_true
+        end
+
+        it "should not remove image if validations fail on save" do
+          @class.validate { |r| r.errors.add :textfile, "FAIL!" }
+          @event.image = stub_file('landscape.jpg')
+          @event.save.should be_false
+          File.exists?(public_path('uploads/test.jpg')).should be_true
+          File.exists?(public_path('uploads/landscape.jpg')).should be_false
+        end
+      end
+
+      describe 'with mount_on' do
+        before do
+          # jnicklas: One tiny nit pick would be that this seems to ignore the :mount_on option
+          # which can be set for mount_uploader, though I'm not sure if anyone actually uses that.
+          # Still might be worth investigating.
+
+          pending # mount_on => :monkey
+        end
+
+        it "should remove previous image with mount_on value if previous image had a different path" do
+          pending
+        end
+
+        it "should not remove previous image with mount_on value if previous image had the same path" do
+          pending
+        end
+      end
+
+      describe 'with versions' do
+        before do
+          pending # version :thumb
+        end
+
+        it "should remove previous image versions if previous image had a different path" do
+          pending
+        end
+
+        it "should not remove previous image versions if previous image had the same path" do
+          pending
+        end
+      end
+
+      describe 'with an overriden filename' do
+        before do
+          @uploader.class_eval do
+            def filename
+              model.name + File.extname(super)
+            end
+          end
+
+          @event.stub!(:name).and_return('jonas')
+
+          @event.image = stub_file('test.jpg')
+          @event.save.should be_true
+          File.exists?(public_path('uploads/jonas.jpg')).should be_true
+          @event.image.read.should == "this is stuff"
+        end
+
+        it "should not remove image if previous image had the same dynamic path" do
+          @event.image = stub_file('landscape.jpg')
+          @event.save.should be_true
+          File.exists?(public_path('uploads/jonas.jpg')).should be_true
+          @event.image.read.should_not == "this is stuff"
+        end
+
+        it "should remove previous image if previous image had a different dynamic path" do
+          # bundle exec spec spec/orm/activerecord_spec.rb:431
+          # see mount.rb for notes
+          @event.stub!(:name).and_return('jose')
+          @event.image = stub_file('landscape.jpg')
+          @event.save.should be_true
+          File.exists?(public_path('uploads/jose.jpg')).should be_true
+          File.exists?(public_path('uploads/jonas.jpg')).should be_false
+          @event.image.read.should_not == "this is stuff"
+        end
+      end
     end
 
   end

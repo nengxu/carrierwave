@@ -226,13 +226,29 @@ module CarrierWave
           _mounter(:#{column}).write_identifier
         end
 
-        # Remove outdated image if the previous upload had a file stored and the
+        # Remove outdated files if the previous upload had files stored and the
         # new upload has nothing stored OR stored the file in a different path.
         def remove_outdated_#{column}!
           previous = read_previous_uploader(:#{column})
           current = self.#{column}
           if previous.respond_to?(:stored?) && previous.stored?
             current_stored = current.respond_to?(:stored?) && current.stored?
+
+            # we want these (or some other thing we can check) to be different if we want to remove the previous files
+            puts
+            puts previous.store_path
+            puts current.store_path
+
+            # we can try file.path, but that comes up with a tmp file for current file path
+            puts previous.file.path
+            puts current.file.path
+            puts
+
+            # any other ideas?
+
+            # i think we might need to do something like didier and put together
+            # where we instantiate a new model based on the old attrs and get the path from that
+
             previous.remove! if !current_stored || previous.store_path != current.store_path
           end
         end

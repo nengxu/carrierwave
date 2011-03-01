@@ -246,8 +246,9 @@ module CarrierWave
 
             # any other ideas?
 
-            # i think we might need to do something like didier and put together
+            # i think we might need to do something like didier and I put together
             # where we instantiate a new model based on the old attrs and get the path from that
+            # see this commit: https://github.com/did/carrierwave/commit/b838220
 
             previous.remove! if !current_stored || previous.store_path != current.store_path
           end

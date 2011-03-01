@@ -25,8 +25,10 @@ module CarrierWave
       validates_processing_of column if uploader_option(column.to_sym, :validate_processing)
 
       # Use symbols because strings are evaluated instead of dispatched
-      after_save :"store_#{column}!", :"remove_outdated_#{column}!"
+      after_save :"store_#{column}!"
       before_save :"write_#{column}_identifier"
+      before_update :"store_outdated_#{column}"
+      after_update :"remove_outdated_#{column}!"
       after_destroy :"remove_#{column}!"
 
       class_eval <<-RUBY, __FILE__, __LINE__+1
@@ -37,9 +39,10 @@ module CarrierWave
 
         private
 
-        def read_previous_uploader(column)
-          previous, current = send("#{column}_change")
-          previous
+        def store_outdated_#{column}
+          return unless #{column}_changed?
+          @cached_uploaders ||= {}
+          @cached_uploaders[:#{column}] = self.class.find(to_key[0]).#{column}
         end
       RUBY
     end

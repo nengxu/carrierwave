@@ -74,6 +74,7 @@ module CarrierWave
       def retrieve_from_store!(identifier)
         with_callbacks(:retrieve_from_store, identifier) do
           @file = storage.retrieve!(identifier)
+          @filename = identifier
         end
       end
 

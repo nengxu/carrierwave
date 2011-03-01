@@ -16,6 +16,7 @@ ActiveRecord::Migration.verbose = false
 class TestMigration < ActiveRecord::Migration
   def self.up
     create_table :events, :force => true do |t|
+      t.column :name, :string
       t.column :image, :string
       t.column :textfile, :string
       t.column :foo, :string
@@ -260,7 +261,7 @@ describe CarrierWave::ActiveRecord do
               model.name + File.extname(super)
             end
           end
-          @event.stub!(:name).and_return('jonas')
+          @event.name = "jonas"
         end
 
         it "should copy the file to the upload directory when a file has been assigned" do
@@ -285,7 +286,7 @@ describe CarrierWave::ActiveRecord do
 
       before do
         @class.validates_presence_of :image
-        @event.stub!(:name).and_return('jonas')
+        @event.name = "jonas"
       end
 
       it "should be valid if a file has been cached" do
@@ -303,7 +304,7 @@ describe CarrierWave::ActiveRecord do
 
       before do
         @class.validates_size_of :image, :maximum => 40
-        @event.stub!(:name).and_return('jonas')
+        @event.name = "jonas"
       end
 
       it "should be valid if a file has been cached that matches the size criteria" do
@@ -413,7 +414,7 @@ describe CarrierWave::ActiveRecord do
             end
           end
 
-          @event.stub!(:name).and_return('jonas')
+          @event.name = "jonas"
 
           @event.image = stub_file('test.jpg')
           @event.save.should be_true
@@ -431,7 +432,7 @@ describe CarrierWave::ActiveRecord do
         it "should remove previous image if previous image had a different dynamic path" do
           # bundle exec spec spec/orm/activerecord_spec.rb:431
           # see mount.rb for notes
-          @event.stub!(:name).and_return('jose')
+          @event.name = "jose"
           @event.image = stub_file('landscape.jpg')
           @event.save.should be_true
           File.exists?(public_path('uploads/jose.jpg')).should be_true

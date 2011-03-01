@@ -233,23 +233,6 @@ module CarrierWave
           current = self.#{column}
           if previous.respond_to?(:stored?) && previous.stored?
             current_stored = current.respond_to?(:stored?) && current.stored?
-
-            # we want these (or some other thing we can check) to be different if we want to remove the previous files
-            puts
-            puts previous.store_path
-            puts current.store_path
-
-            # we can try file.path, but that comes up with a tmp file for current file path
-            puts previous.file.path
-            puts current.file.path
-            puts
-
-            # any other ideas?
-
-            # i think we might need to do something like didier and I put together
-            # where we instantiate a new model based on the old attrs and get the path from that
-            # see this commit: https://github.com/did/carrierwave/commit/b838220
-
             previous.remove! if !current_stored || previous.store_path != current.store_path
           end
         end
@@ -265,9 +248,12 @@ module CarrierWave
       def read_uploader(column); end
 
       ##
-      # overwrite this to read the value of a previously set upload
+      # read a previously set uploader. usually that is done by reading
+      # @cached_uploaders instance variable but can be overwriten by ORMs
       #
-      def read_previous_uploader(column); end
+      def read_previous_uploader(column)
+        @cached_uploaders && @cached_uploaders[column]
+      end
 
       ##
       # overwrite this to write to a serialized attribute

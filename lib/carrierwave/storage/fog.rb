@@ -19,9 +19,11 @@ module CarrierWave
     # [:fog_credentials]  credentials for service
     # [:fog_directory]    specifies name of directory to store data in
     #
-    # [:fog_attributes]   (optional) additional attributes to set on files
-    # [:fog_host]         (optional) non-default host to serve files from
-    # [:fog_public]       (optional) public readability, defaults to true
+    # [:fog_attributes]                   (optional) additional attributes to set on files
+    # [:fog_host]                         (optional) non-default host to serve files from
+    # [:fog_public]                       (optional) public readability, defaults to true
+    # [:fog_authenticated_url_expiration] (optional) time (in seconds) that authenticated urls
+    #   will be valid, when fog_public is false and provider is AWS or Google, defaults to 600
     #
     #
     # AWS credentials contain the following keys:
@@ -133,8 +135,10 @@ module CarrierWave
         #
         def authenticated_url
           if ['AWS', 'Google'].include?(@uploader.fog_credentials[:provider])
-            # avoid a get by just using local reference
-            directory.files.new(:key => path).url(::Fog::Time.now + 60 * 10)
+            # avoid a get by using local references
+            local_directory = connection.directories.new(:key => @uploader.fog_directory)
+            local_file = local_directory.files.new(:key => path)
+            local_file.url(::Fog::Time.now + @uploader.fog_authenticated_url_expiration)
           else
             nil
           end
@@ -148,7 +152,7 @@ module CarrierWave
         # [String] value of content-type
         #
         def content_type
-          @content_type
+          @content_type || file.content_type
         end
 
         ##
@@ -220,10 +224,10 @@ module CarrierWave
         #
         # [Boolean] true on success or raises error
         def store(new_file)
-          self.content_type ||= new_file.content_type
+          @content_type ||= new_file.content_type
           @file = directory.files.create({
             :body         => new_file.read,
-            :content_type => content_type,
+            :content_type => @content_type,
             :key          => path,
             :public       => @uploader.fog_public
           }.merge(@uploader.fog_attributes))
@@ -302,11 +306,7 @@ module CarrierWave
         # [Fog::#{provider}::File] file data from remote service
         #
         def file
-          @file ||= begin
-            file = directory.files.get(path)
-            self.content_type = file.content_type
-            file
-          end
+          @file ||= directory.files.get(path)
         end
 
       end

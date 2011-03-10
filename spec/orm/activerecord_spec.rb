@@ -332,6 +332,10 @@ describe CarrierWave::ActiveRecord do
         pending # TODO note - we should get this working with mongoid, maybe in the mongoid spec
       end
 
+      it "should work with mongoid" do
+        pending # TODO note - we should test that this all works with multiple mounted uploaders
+      end
+
       describe 'without additional options' do
         before do
           @event.image = stub_file('test.jpeg')

@@ -24,7 +24,6 @@ module CarrierWave
       validates_integrity_of column if uploader_option(column.to_sym, :validate_integrity)
       validates_processing_of column if uploader_option(column.to_sym, :validate_processing)
 
-      # Use symbols because strings are evaluated instead of dispatched
       after_save :"store_#{column}!"
       before_save :"write_#{column}_identifier"
       before_update :"store_outdated_#{column}"

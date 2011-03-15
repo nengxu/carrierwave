@@ -95,6 +95,12 @@ automatically be stored when the record is saved.
     u.avatar.url # => '/url/to/file.png'
     u.avatar.current_path # => 'path/to/file.png'
 
+If using DataMapper, make sure to disable auto_validation on the mounted column.
+
+If using Mongoid, note that embedded documents files aren't saved when parent documents are saved.
+You must explicitly call save on embedded documents in order to save their attached files.
+You can read more about this {here}[https://github.com/jnicklas/carrierwave/issues#issue/81]
+
 == Changing the storage directory
 
 In order to change where uploaded files are put, just override the +store_dir+
@@ -308,7 +314,7 @@ If you're using Rails, create an initializer for this:
 
     config/initializers/carrierwave.rb
 
-== Testing CarrierWave
+== Testing with CarrierWave
 
 It's a good idea to test you uploaders in isolation. In order to speed up your
 tests, it's recommended to switch off processing in your tests, and to use the
@@ -589,16 +595,12 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 == Development
 
-In order to setup a development environment and run the specs, you'll
-need to install bundler:
+You'll need to install bundler and the gem dependencies:
 
     gem install bundler
-
-And then install the dependencies:
-
     bundle install
 
-You should now be able to run the tests:
+You should now be able to run the local tests:
 
     bundle exec rake
 
@@ -612,8 +614,10 @@ You can also run the remote specs by creating a ~/.fog file:
       :google_storage_access_key_id: xxx
       :google_storage_secret_access_key: yyy
 
-And then running the following, providing your credentials again (hopefully this is only temporary):
+You should now be able to run the remote tests:
 
-    FOG_MOCK=false S3_SPEC=true CLOUDFILES_SPEC=true CARRIERWAVE_DIRECTORY= S3_ACCESS_KEY_ID= S3_SECRET_ACCESS_KEY= CLOUD_FILES_USER_NAME= CLOUD_FILES_API_KEY= bundle exec rake
+    REMOTE=true bundle exec rake
 
-Issues are reported on GitHub, pull requests are very welcome!
+Please test with the latest Ruby 1.8.x and 1.9.x versions using RVM if possible.
+
+Issues are reported on GitHub, and pull requests are very welcome!

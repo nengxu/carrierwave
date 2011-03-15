@@ -9,15 +9,19 @@ require 'logger'
 
 require 'carrierwave'
 require 'timecop'
+require 'open-uri'
+require 'sham_rack'
 
 require 'fog'
 require 'storage/fog_helper'
 
-unless ENV['FOG_MOCK'] == 'false'
+unless ENV['REMOTE'] == 'true'
   Fog.mock!
 end
 
-ENV['CARRIERWAVE_DIRECTORY'] ||= "carrierwave#{Time.now.to_i}"
+require 'fog_credentials' # after Fog.mock!
+
+CARRIERWAVE_DIRECTORY = "carrierwave#{Time.now.to_i}" unless defined?(CARRIERWAVE_DIRECTORY)
 
 alias :running :lambda
 

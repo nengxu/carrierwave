@@ -19,6 +19,7 @@ class TestMigration < ActiveRecord::Migration
       t.column :image, :string
       t.column :textfile, :string
       t.column :foo, :string
+      t.column :name, :string
     end
   end
 
@@ -252,7 +253,7 @@ describe CarrierWave::ActiveRecord do
 
     end
 
-    describe 'with overriddent filename' do
+    describe 'with overridden filename' do
 
       describe '#save' do
 
@@ -262,7 +263,7 @@ describe CarrierWave::ActiveRecord do
               model.name + File.extname(super)
             end
           end
-          @event.stub!(:name).and_return('jonas')
+          @event.name = "jonas"
         end
 
         it "should copy the file to the upload directory when a file has been assigned" do
@@ -287,7 +288,7 @@ describe CarrierWave::ActiveRecord do
 
       before do
         @class.validates_presence_of :image
-        @event.stub!(:name).and_return('jonas')
+        @event.name = "jonas"
       end
 
       it "should be valid if a file has been cached" do
@@ -305,7 +306,7 @@ describe CarrierWave::ActiveRecord do
 
       before do
         @class.validates_size_of :image, :maximum => 40
-        @event.stub!(:name).and_return('jonas')
+        @event.name = "jonas"
       end
 
       it "should be valid if a file has been cached that matches the size criteria" do
@@ -320,6 +321,133 @@ describe CarrierWave::ActiveRecord do
 
     end
 
-  end
+    describe 'remove previously stored files for a mounted uploader' do
+      after do
+        FileUtils.rm_rf(file_path("uploads"))
+      end
 
+      it "should work with fog" do
+        pending # we should check that this works with fog, maybe in the fog spec
+      end
+
+      it "should work with mongoid" do
+        pending # we should get this working with mongoid, maybe in the mongoid spec
+      end
+
+      describe 'without additional options' do
+        before do
+          @event.image = stub_file('test.jpeg')
+          @event.save.should be_true
+          File.exists?(public_path('uploads/test.jpeg')).should be_true
+        end
+
+        it "should remove previous image if previous image had a different path" do
+          @event.image = stub_file('test.jpg')
+          @event.save.should be_true
+          File.exists?(public_path('uploads/test.jpg')).should be_true
+          File.exists?(public_path('uploads/test.jpeg')).should be_false
+        end
+
+        it "should not remove previous image if previous image had a different path but config is false" do
+          @uploader.stub!(:remove_previously_stored_files_after_update).and_return(false)
+          @event.image = stub_file('test.jpg')
+          @event.save.should be_true
+          File.exists?(public_path('uploads/test.jpg')).should be_true
+          File.exists?(public_path('uploads/test.jpeg')).should be_true
+        end
+
+        it "should not remove image if previous image had the same path" do
+          @event.image = stub_file('test.jpeg')
+          @event.save.should be_true
+          File.exists?(public_path('uploads/test.jpeg')).should be_true
+        end
+
+        it "should not remove image if validations fail on save" do
+          @class.validate { |r| r.errors.add :textfile, "FAIL!" }
+          @event.image = stub_file('landscape.jpg')
+          @event.save.should be_false
+          File.exists?(public_path('uploads/test.jpg')).should be_true
+          File.exists?(public_path('uploads/landscape.jpg')).should be_false
+        end
+      end
+
+      describe 'with mount_on' do
+        before do
+          # mount_on => :monkey
+        end
+
+        it "should remove previous image with mount_on value if previous image had a different path" do
+          pending
+        end
+
+        it "should not remove previous image with mount_on value if previous image had the same path" do
+          pending
+        end
+      end
+
+      describe 'with versions' do
+        before do
+          # version :thumb
+        end
+
+        it "should remove previous image versions if previous image had a different path" do
+          pending
+        end
+
+        it "should not remove previous image versions if previous image had the same path" do
+          pending
+        end
+      end
+
+      describe 'multiple mounted uploaders' do
+        before do
+          # multiple uploaders mounted on the same model
+        end
+
+        it "should remove previous image and image2 if previous image and image2 had a different paths" do
+          pending
+        end
+
+        it "should not remove previous image or image2 if previous image and image2 had the same paths" do
+          pending
+        end
+
+        it "should remove previous image but not image2 if previous image had a different path but image2 had the same path" do
+          pending
+        end
+      end
+
+      describe 'with an overriden filename' do
+        before do
+          @uploader.class_eval do
+            def filename
+              model.name + File.extname(super)
+            end
+          end
+          
+          @event.name = "jonas"
+          @event.image = stub_file('test.jpg')
+          @event.save.should be_true
+          File.exists?(public_path('uploads/jonas.jpg')).should be_true
+          @event.image.read.should == "this is stuff"
+        end
+
+        it "should not remove image if previous image had the same dynamic path" do
+          @event.image = stub_file('landscape.jpg')
+          @event.save.should be_true
+          File.exists?(public_path('uploads/jonas.jpg')).should be_true
+          @event.image.read.should_not == "this is stuff"
+        end
+
+        it "should remove previous image if previous image had a different dynamic path" do
+          @event.name = "jose"
+          @event.image = stub_file('landscape.jpg')
+          @event.save.should be_true
+          File.exists?(public_path('uploads/jose.jpg')).should be_true
+          File.exists?(public_path('uploads/jonas.jpg')).should be_false
+          @event.image.read.should_not == "this is stuff"
+        end
+      end
+    end
+  end
 end

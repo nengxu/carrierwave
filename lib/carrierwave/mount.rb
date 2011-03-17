@@ -226,8 +226,19 @@ module CarrierWave
           _mounter(:#{column}).write_identifier
         end
 
-      RUBY
+        def store_previous_model_for_#{column}
+          if self.#{column}.remove_previously_stored_files_after_update && self.#{column}_changed?
+            @previous_model_for_#{column} = self.class.find(to_key.first)
+          end
+        end
 
+        def remove_previously_stored_#{column}
+          if @previous_model_for_#{column} && @previous_model_for_#{column}.#{column}.path != self.#{column}.path
+            @previous_model_for_#{column}.#{column}.remove!
+          end
+        end
+
+      RUBY
     end
 
     module Extension

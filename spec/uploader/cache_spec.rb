@@ -5,6 +5,7 @@ require 'spec_helper'
 describe CarrierWave::Uploader do
 
   before do
+    FileUtils.rm_rf(public_path)
     @uploader_class = Class.new(CarrierWave::Uploader::Base)
     @uploader = @uploader_class.new
   end
@@ -23,18 +24,25 @@ describe CarrierWave::Uploader do
 
     after { FileUtils.rm_rf(@cache_dir) }
 
-    it "should clear all files older than 24 hours in the default cache directory" do
+    it "should clear all files older than, by defaul, 24 hours in the default cache directory" do
       Timecop.freeze(Time.utc(2007, 12, 6, 10, 12)) do
         @uploader_class.clean_cached_files!
       end
-      Dir.glob("#{@cache_dir}/*").should have(1).element
+      Dir.glob("#{@cache_dir}/*").size.should == 1
+    end
+
+    it "should permit to set since how many seconds delete the cached files" do
+      Timecop.freeze(Time.utc(2007, 12, 6, 10, 12)) do
+        @uploader_class.clean_cached_files!(60*60*24*4)
+      end
+      Dir.glob("#{@cache_dir}/*").should have(2).element
     end
 
     it "should be aliased on the CarrierWave module" do
       Timecop.freeze(Time.utc(2007, 12, 6, 10, 12)) do
         CarrierWave.clean_cached_files!
       end
-      Dir.glob("#{@cache_dir}/*").should have(1).element
+      Dir.glob("#{@cache_dir}/*").size.should == 1
     end
   end
 

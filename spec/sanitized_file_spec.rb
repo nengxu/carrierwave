@@ -5,9 +5,7 @@ require 'spec_helper'
 describe CarrierWave::SanitizedFile do
 
   before do
-    unless File.exists?(file_path('llama.jpg'))
-      FileUtils.cp(file_path('test.jpg'), file_path('llama.jpg'))
-    end
+    FileUtils.cp(file_path('test.jpg'), file_path('llama.jpg'))
   end
 
   after(:all) do
@@ -134,9 +132,9 @@ describe CarrierWave::SanitizedFile do
       @sanitized_file.filename.should == "_."
     end
 
-    it "should downcase uppercase filenames" do
+    it "should maintain uppercase filenames" do
       @sanitized_file.should_receive(:original_filename).at_least(:once).and_return("DSC4056.JPG")
-      @sanitized_file.filename.should == "dsc4056.jpg"
+      @sanitized_file.filename.should == "DSC4056.JPG"
     end
 
   end
@@ -164,8 +162,8 @@ describe CarrierWave::SanitizedFile do
 
     before do
       @sanitized_file = CarrierWave::SanitizedFile.new(nil)
-      regexp = RUBY_VERSION >= '1.9' ? '[^[:word:]\.\-\+]' : '[^ёЁа-яА-Яa-zA-Zà-üÀ-Ü0-9\.\-\+_]'
-      @sanitized_file.stub(:sanitize_regexp).and_return(Regexp.new(regexp))
+      regexp = RUBY_VERSION >= '1.9' ? Regexp.new('[^[:word:]\.\-\+]') : /[^éôёЁа-яА-Яa-zA-Zà-üÀ-Ü0-9\.\-\+_]/u
+      @sanitized_file.stub(:sanitize_regexp).and_return(regexp)
     end
 
     it "should default to the original filename if it is valid" do
@@ -175,19 +173,29 @@ describe CarrierWave::SanitizedFile do
 
     it "should downcase characters properly" do
       @sanitized_file.should_receive(:original_filename).at_least(:once).and_return("ТестоВый Ёжик.jpg")
-      @sanitized_file.filename.should == "тестовый_ёжик.jpg"
-    end
-
-    it "should downcase characters with diacritics properly" do
-      @sanitized_file.should_receive(:original_filename).at_least(:once).and_return("CONTRÔLE.jpg")
-      @sanitized_file.filename.should == "contrôle.jpg"
+      @sanitized_file.filename.should == "ТестоВый_Ёжик.jpg"
     end
 
     it "should remove illegal characters from a filename" do
       @sanitized_file.should_receive(:original_filename).at_least(:once).and_return("⟲«Du côté des chars lourds»_123.doc")
-      @sanitized_file.filename.should == "__du_côté_des_chars_lourds__123.doc"
+      @sanitized_file.filename.should == "__Du_côté_des_chars_lourds__123.doc"
     end
 
+  end
+
+  describe "#content_type" do
+    it "preserves file's content_type" do
+      @sanitized_file = CarrierWave::SanitizedFile.new(:content_type => 'image/png')
+      @sanitized_file.content_type.should == 'image/png'
+    end
+  end
+
+  describe "#content_type=" do
+    it "sets content_type" do
+      @sanitized_file = CarrierWave::SanitizedFile.new(:content_type => 'image/png')
+      @sanitized_file.content_type = 'text/html'
+      @sanitized_file.content_type.should == 'text/html'
+    end
   end
 
   shared_examples_for "all valid sanitized files" do
@@ -327,7 +335,7 @@ describe CarrierWave::SanitizedFile do
 
       it "should preserve the file's content type" do
         new_file = @sanitized_file.copy_to(file_path('gurr.png'))
-        new_file.content_type.should ==(@sanitized_file.content_type)
+        new_file.content_type.should == @sanitized_file.content_type
       end
 
     end
@@ -373,6 +381,20 @@ describe CarrierWave::SanitizedFile do
         File.exists?(@sanitized_file.path).should be_true
         @sanitized_file.delete
         File.exists?(@sanitized_file.path).should be_false
+      end
+    end
+
+    describe '#to_file' do
+      it "should return a File object" do
+        @sanitized_file.to_file.should be_a(File)
+      end
+
+      it "should have the same path as the SanitizedFile" do
+        @sanitized_file.to_file.path.should == @sanitized_file.path
+      end
+
+      it "should have the same contents as the SantizedFile" do
+        @sanitized_file.to_file.read.should == @sanitized_file.read
       end
     end
   end
@@ -459,6 +481,12 @@ describe CarrierWave::SanitizedFile do
     describe '#delete' do
       it "should not raise an error" do
         running { @sanitized_file.delete }.should_not raise_error
+      end
+    end
+
+    describe '#to_file' do
+      it "should be nil" do
+        @sanitized_file.to_file.should be_nil
       end
     end
 
@@ -606,6 +634,12 @@ describe CarrierWave::SanitizedFile do
         running { @empty.delete }.should_not raise_error
       end
     end
+
+    describe '#to_file' do
+      it "should be nil" do
+        @empty.to_file.should be_nil
+      end
+    end
   end
 
   describe "that is an empty string" do
@@ -670,6 +704,12 @@ describe CarrierWave::SanitizedFile do
     describe '#delete' do
       it "should not raise an error" do
         running { @empty.delete }.should_not raise_error
+      end
+    end
+
+    describe '#to_file' do
+      it "should be nil" do
+        @empty.to_file.should be_nil
       end
     end
   end
